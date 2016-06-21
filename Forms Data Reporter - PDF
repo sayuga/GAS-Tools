@@ -31,6 +31,18 @@ function onOpen()
    .addToUi();  
 };
 
+//
+//Time Trigger for daily checks
+//
+
+function trigger()
+{
+  ScriptApp.newTrigger("projectBuilder2") //Function being ran
+  .timeBased()
+  .atHour(1) //Runs at 1am 
+  .everyDays(1) //checks daily
+  .create()
+};
 
 
 //
