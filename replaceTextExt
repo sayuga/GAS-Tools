@@ -1,0 +1,18 @@
+
+function replaceTextExt(fileTag, refGID)
+{
+          var fileId = refGID; //Gets GID for blob being used. 
+          var tag = fileTag; //Tag where item will be appended 
+          var style = {};
+          style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
+          
+          var blob = DriveApp.getFileById(fileId).getBlob(); //Gets image blob  
+          
+          if (newBody.findText(tag) != null) //Makes sure tag exists
+          {
+            var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //Identifies tag location
+            var clearTag = newBody.replaceText(tag, ""); //Removes placeholder tag
+            
+            replacedParent.appendInlineImage(blob).setAttributes(style); //Adds image at tag location using set "style"            
+          }
+}
