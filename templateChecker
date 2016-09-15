@@ -1,0 +1,36 @@
+//identifies a trigger field column from a data set that can be used to designate which templateID
+
+function templateChecker(sGID, sSheet, myData){
+  var controlSheet = SpreadsheetApp.openById(sGID).getSheetByName(sSheet); //Location of Building Blocks
+  var triggerFieldNum = controlSheet.getRange("F2").getValue();//using in sheet cell to state trigger is in 'x' column;
+  Logger.log("trigger Field Num: " + triggerFieldNum);
+  var triggerField = myData[triggerFieldNum];
+  Logger.log("triggerField:" +triggerField);
+  
+  var dt = controlSheet.getRange("D3:F16").getValues(); //master trigger+GID reference array
+  var testValue = {};
+  var gidValue = {};
+  
+  for(var j in dt){ 
+     testValue[j] = dt[j][0]; //column with test trigger reference to match
+     gidValue[j] = dt[j][2]; //Google ID Reference per trigger
+  }
+  Logger.log("testValues : " + testValue);
+  Logger.log("GIDValues : " + gidValue);
+    
+  for (var i in testValue){
+    Logger.log("templateLoop # " +i);
+    if (testValue[i] !=""){
+      if (triggerField === testValue[i] ){
+        var tGID = gidValue[i];
+        Logger.log("testValue" +i+":" +testValue[i]);
+        Logger.log("gidValue" +i+":" +gidValue[i]);
+      }    
+    }
+  }
+    
+  Logger.log("current triggerField: " + triggerField);  
+  Logger.log("current tGID: " + tGID);  
+  
+  return tGID;    
+}
