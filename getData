@@ -1,0 +1,12 @@
+//Returns array with spreadsheet data from a given GoogleID, Tab, starting row and starting colum
+
+function getData(sourceGID, dataSheetName, fRow, fCol){
+    
+  var dataSheet = SpreadsheetApp.openById(sourceGID).getSheetByName(dataSheetName); //Open sheet containing data to merge
+  var numRows = dataSheet.getLastRow();//gets last row with data in sheet
+  var numColumns = dataSheet.getLastColumn();  //Gets last column with data in sheet       
+  var dataRange = dataSheet.getRange(fRow, fCol, numRows, numColumns);//Designates Range of data
+  var object = dataRange.getValues(); //Pulls values in the range as an Array   
+  
+  return object;
+};
