@@ -1,298 +1,491 @@
-/////////////////////////////////////////////////////////////////
-///Programmer: Jonathan Vargas                                ///
-///Date: 5/2/2016  Version: 2.0                               ///
-///                                                           ///
-///Description:                                               ///
-///                                                           ///
-/// The script will pull the data filtered into the DataMerge ///
-///tab, associate data descriptors (Charts/Images) and then   ///
-///replace the appropiate docs template tags with the values  ///
-///found in the spreadsheet.                                  ///
-///                                                           ///
-///Pending Updates:                                           ///
-///  + Consistent Chart/Image reference                       ///
-///  + incode Chart Build                                     ///
-///  + UI Interface                                           ///
-///  + In Sheet Trigger control                               ///
-///  + In Script Documentation Cleanup                        ///
-///                                                           ///
-/////////////////////////////////////////////////////////////////
-
-//
-//UI Menu
-//
-
 function onOpen()
 {
   var ui = SpreadsheetApp.getUi();
-   ui.createMenu('Script Runner')
-   .addItem('Run Report Builder V2', 'projectBuilder2')
-   .addToUi();  
+   ui.createMenu('Script Runner 3')
+   .addItem('On Demand Run', 'demandRun')
+   .addToUi();     
 };
 
-//
-//Time Trigger for daily checks
-//
-
-function trigger()
-{
-  ScriptApp.newTrigger("projectBuilder2") //Function being ran
-  .timeBased()
-  .atHour(1) //Runs at 1am 
-  .everyDays(1) //checks daily
-  .create()
-};
-
-
-//
-//MAIN BUILDING PROFILE FOR REPORT
-//
-function projectBuilder2() 
-{    
-  var source = SpreadsheetApp.getActiveSpreadsheet() 
-
-  ////ACCESS CONTROL SHEET - !!!!!INITIAL EVENT!!!!!////
-  var templateSheetsSource = "Control";    
-  var templateSheet = source.getSheetByName(templateSheetsSource); //Location of Building Blocks
- 
-  ////DOCUMENT ELEMENTS//// 
-  var docName = templateSheet.getRange("B2").getValue();  //Document name
-  
-  ////EMAIL ELEMENTS////
-  var sendTo = templateSheet.getRange("B4").getValue(); //Who is receiving it
-  var sendSubject = templateSheet.getRange("B5").getValue(); //Email Subject 
-  var sendBody = templateSheet.getRange("A7").getValue(); //Intro for Email Body
-  
-  ////DATA ELEMENTS///
-  var dataSheetName = templateSheet.getRange("B9").getValue(); //Data Sheet Name 
-  var fCol = templateSheet.getRange("B10").getValue();//first column where data starts
-  var fRow = templateSheet.getRange("D10").getValue();//first Row where data starts  
-  var numEntries = templateSheet.getRange("F10").getValue(); //number of Form entries
-  
-  ////GOOGLE ID's////
-  var GIDArchive = templateSheet.getRange("F16").getValue(); //Destination folder ID - Archive Folder Google ID  
-  var GIDTemplate = templateSheet.getRange("F17").getValue(); //DocSource2 - Report Template
-  var GIDLetterHead = templateSheet.getRange("F19").getValue(); //DocSource - LetterHead
-  var GIDLogo = templateSheet.getRange("F20").getValue(); //ImgSource - Logo
-  
-  
-  ////CHART DATA////
-  var chartName = {};
-  chartName[0] = templateSheet.getRange("A23").getValue(); //Chart 1 Sheet Name
-  chartName[1]  = templateSheet.getRange("A24").getValue(); //Chart 2 Sheet Name
-  chartName[2]  = templateSheet.getRange("A25").getValue(); //Chart 3 Sheet Name
-  chartName[3]  = templateSheet.getRange("A26").getValue(); //Chart 4 Sheet Name
-  chartName[4]   = templateSheet.getRange("A27").getValue(); //Chart 5 Sheet Name
-  var chartOne = source.getSheetByName(chartName[0]).getCharts();
-  var chartTwo = source.getSheetByName(chartName[1]).getCharts();
-  var chartThree = source.getSheetByName(chartName[2]).getCharts();
-  var chartFour = source.getSheetByName(chartName[3]).getCharts();
-  var chartFive = source.getSheetByName(chartName[4]).getCharts();
-
- 
-  ////GENERAL FORMAT////
-  var style = {};
-  style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
+function demandRun(){
+  try{
+    var gOne = SpreadsheetApp.getActiveSpreadsheet().getId(); //report Spreadsheet
+    var gTwo = "<Add_Your_GoogleIDKey>";    //Master Error Logger Sheet
+    var gOneName = SpreadsheetApp.getActiveSpreadsheet().getName();
     
-  
-  ////DOCUMENT BUILDER////
-  if (numEntries > 0) //Checks entry count to designate to run or not.
-  {    
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    /////////////CREATE COPY FROM TEMPLATE IN ARCHIVE//////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    
-    var destFolder = DriveApp.getFolderById(GIDArchive); //Designate Folder destination
-    var copyDoc = DriveApp.getFileById(GIDLetterHead).makeCopy(docName, destFolder); //Copy template to folder   
-    var newDocID = copyDoc.getId(); // New Document ID 
-    var newDoc = DocumentApp.openById(newDocID);
-    var newBody = newDoc.getBody(); //new Document Body
-    
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    /////////////CREATE DATA OBJECT FROM ENTRIES FOUND ////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-      
-    var dataSheet = source.getSheetByName(dataSheetName); //Open sheet containing data to merge
-    var numRows = dataSheet.getLastRow();//gets last row with data in sheet
-    //var numRows = dataSheet.getMaxRows() -1; //Gets maximum number of rows in sheet minus header
-    //var numColumns = dataSheet.getMaxColumns(); //Gets maximum number of columns in sheet     
-    var numColumns = dataSheet.getLastColumn();  //Gets last column with data in sheet      
-    var dataRange = dataSheet.getRange(fRow, fCol, numRows, numColumns);//Designates Range of data
-    var object = dataRange.getValues(); //Pulls values in the range as an Array       
-    
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    /////////////PHYSICAL BUILD OF DOCUMENT - COPY TEMPLATE AND REPLACE TAGS LOOP//////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////    
-    
-    for (var i = 0; i < numEntries; ++i) //Adds pages for elements according to the total number of entries calculated. 
-    { 
-      newBody.appendPageBreak();
-      
-      var templateBody = DocumentApp.openById(GIDTemplate).getBody();//Gets template body
-      var totalElements = templateBody.getNumChildren(); //Child Index for template file  
-      
-      ///////////////////////////////////////////////////////////////////////////////////////////////
-      /////////////COPIES TEMPLATE INTO NEW DOCUMENT WITH KEY TAG DESCRIPTIORS///////////////////////
-      ///////////////////////////////////////////////////////////////////////////////////////////////
-      for( var j = 0; j < totalElements; ++j ) //Checks against all elemnt types and appends accordingly.
-      {    
-        var element = templateBody.getChild(j).copy();
-        var type = element.getType();    
-        
-        if( type == DocumentApp.ElementType.PARAGRAPH ) //copies paragraph objects
-        {newBody.appendParagraph(element);}
-        
-        else if( type == DocumentApp.ElementType.TABLE)//copies table objects
-        {newBody.appendTable(element);} 
-      
-        else if( type == DocumentApp.ElementType.HORIZONTAL_RULE) //copies horizontal rule objects
-        {newBody.appendHorizontalRule();}
-      } 
-
-      ///////////////////////////////////////////////////////////////////////////////////////////////
-      /////////////REPLACES TAG DESCRIPTIORS WITH SPREADSHEET VALUES      ///////////////////////////
-      ///////////////////////////////////////////////////////////////////////////////////////////////
-      
-      var myData = object[i]; //Looks at specific data set from object array
-      
-      ////////////////Tag Definer //////////////////
-      var c = {};
-      var y = "{Field";
-      var z = "}";
-      
-      for (var tagNum = 0; tagNum < myData.length; tagNum++)
-      {c[tagNum]  = y + tagNum + z;} // compiles: "{Field" + # + "}" into {Field#}
-      
-       ////Chart Counters////
-      var aA = 0;
-      var aB = 0;      
-      var aC = 0;      
-      var aD = 0;      
-      var aE = 0;  
-      
-      /////////////////Data Identifier & Merger /////////////////////////////
-      
-      for (var q = 0; q <myData.length; q++)
-      { 
-        if (myData[q] == "Image") //Image Check
-        {
-          var fileId = myData[q+1]; //Gets GID for image
-          var tag = c[q]; //current tag
-          
-          if (fileId == "")
-          {fileId = GIDLogo;} //Default Image ID if none present
-          
-          var blob = DriveApp.getFileById(fileId).getBlob(); //gets image blob  
-          
-          if (newBody.findText(tag) != null) //makes sure tag exists
-          {
-            var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
-            var clearTag = newBody.replaceText(tag, ""); //removes tag
-            
-            replacedParent.appendInlineImage(blob).setAttributes(style); //adds image at tag location using set "style"            
-          }      
-        }
-        else if (myData[q] == chartName[0]) //Chart 1 Check
-        {  
-          var tag =c[q];
-          var chart = chartOne[aA];
-          var blob = chart.getBlob();
-          
-          if (newBody.findText(tag) != null) //makes sure tag exists
-          {        
-            var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
-            newBody.replaceText(tag, ""); //removes tag
-            
-            replacedParent.appendInlineImage(blob); //adds image at tag location using set "style"
-          } 
-          
-          aA++;
-        } 
-        else if (myData[q] == chartName[1]) //Chart 2 Check
-        {      
-          var tag =c[q];               
-          var chart = chartTwo[aB];          
-          var blob = chart.getBlob();
-          
-          if (newBody.findText(tag) != null) //makes sure tag exists
-          {
-            var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
-            newBody.replaceText(tag, ""); //removes tag
-            
-            replacedParent.appendInlineImage(blob); //adds image at tag location using set "style"
-          } 
-          
-          aB++;
-        } 
-        else if (myData[q] == chartName[2]) //Chart 3 Check
-        {      
-          var tag =c[q];                  
-          var chart = chartThree[aC];          
-          var blob = chart.getBlob();
-          
-          if (newBody.findText(tag) != null) //makes sure tag exists
-          {
-            var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
-            newBody.replaceText(tag, ""); //removes tag
-            
-            replacedParent.appendInlineImage(blob); //adds image at tag location using set "style"
-          } 
-          
-          aC++;
-        } 
-        else if (myData[q] == chartName[3]) //Chart 4 Check
-        {      
-          var tag =c[q];
-          var chart = chartFour[aD];          
-          var blob = chart.getBlob();
-          
-          if (newBody.findText(tag) != null) //makes sure tag exists
-          {
-            var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
-            newBody.replaceText(tag, ""); //removes tag
-            
-            replacedParent.appendInlineImage(blob); //adds image at tag location using set "style"
-          } 
-          
-          aD++;
-        } 
-        else if (myData[q] == chartName[4]) //Chart 5 Check
-        {      
-          var tag =c[q];         
-          var chart = chartFive[aE];          
-          var blob = chart.getBlob();
-          
-          if (newBody.findText(tag) != null) //makes sure tag exists
-          {
-            var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
-            newBody.replaceText(tag, ""); //removes tag
-            
-            replacedParent.appendInlineImage(blob); //adds image at tag location using set "style"
-          } 
-          
-          aE++;
-        } 
-        else
-        { 
-          var tag = c[q];
-          var currentData = myData[q];
-          if (newBody.findText(tag) != null)
-          {
-            if (currentData != "")
-            {newBody.replaceText(tag, currentData);}
-            else
-            {newBody.replaceText(tag, "");}
-          }
-        }        
-      } 
-    }      
-    
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////SAVE FILE, PUT IT IN A BOW AND MAIL IT OUT ////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    newDoc.saveAndClose();   
-    var file = DriveApp.getFileById(newDocID); //new document in PDF format to attach to email  
-    
-    MailApp.sendEmail(sendTo, sendSubject, sendBody,{attachments:[file]}); //sends final email according to template and attaches newset document.       
+    reporter();
+    runLogger(gOne, gOneName);
+    runLogger(gTwo, gOneName);
   }
+  
+catch(e){           
+    var gOne = SpreadsheetApp.getActiveSpreadsheet().getId(); //report Spreadshee
+    var gTwo = "<Add_Your_GoogleIDKey>";    //Master Error Logger Sheet
+    var gOneName = SpreadsheetApp.getActiveSpreadsheet().getName();
+    errorLogger(e, gOne, gOneName);
+    errorLogger(e, gTwo, gOneName);    
+  
+    Utilities.sleep(20000);
+    reporter();
+  }
+}
+
+function errorLogger(e, egid, gOneName)
+{  
+  var errorSheet = SpreadsheetApp.openById(egid).getSheetByName('Errors');
+  var er1 = gOneName;
+  var today = Utilities.formatDate(new Date(), "EST", "MM-dd-YYYY HH:MM:SS");
+
+  var lastRow = errorSheet.getLastRow();
+  var cell = errorSheet.getRange('A1');
+  cell.offset(lastRow, 0).setValue(e.message);
+  cell.offset(lastRow, 1).setValue(e.fileName);
+  cell.offset(lastRow, 2).setValue(e.lineNumber);      
+  cell.offset(lastRow, 3).setValue(er1);
+  cell.offset(lastRow, 4).setValue(today);
+}
+
+function runLogger(egid, gOneName){
+  var errorSheet = SpreadsheetApp.openById(egid).getSheetByName('Runs');
+  var er1 = gOneName;
+  var today =  Utilities.formatDate(new Date(), "EST", "MM-dd-YYYY HH:MM:SS");
+
+  var lastRow = errorSheet.getLastRow();
+  var cell = errorSheet.getRange('A1');
+  cell.offset(lastRow, 0).setValue("Yes");
+  cell.offset(lastRow, 1).setValue(er1);
+  cell.offset(lastRow, 2).setValue(today);
+};
+
+
+function reporter(){
+  var control = SpreadsheetApp.getActiveSpreadsheet();  
+  var sGID = control.getId();
+  var sSheet = "Control"; //Master Sheet name  
+  var controlSheet = control.getSheetByName(sSheet);  
+    
+  var letterheadGID = controlSheet.getRange("B15").getValue();//"F17"; // cell containing Letterhead GID
+  var archiveGID = controlSheet.getRange("B14").getValue();//"F16";  //cell containing archive GID
+  var numEntries =controlSheet.getRange("B2").getValue();// "F10"; // cell containing number of entries
+  var docName =controlSheet.getRange("B3").getValue();// "B2"; //Cell Containing Document Name
+  var dataSheetName =controlSheet.getRange("B4").getValue();// "B9";   // cell containin data sheet name 
+  var fRow=controlSheet.getRange("B5").getValue();// "D10"; //Cell Containing start row number for source data
+  var fCol = controlSheet.getRange("B6").getValue();//"B10";   //cell containing start column number for source data
+  var sendTo = controlSheet.getRange("B7").getValue();//"B4"; //cell containing start column number for source data
+  var sendSubject =controlSheet.getRange("B8").getValue();// "B5"; //cell containing start column number for source data
+  var sendBody = controlSheet.getRange("B9").getValue();//"A7";//cell containing start column number for source data
+  var clientName =controlSheet.getRange("B11").getValue();// "D2" 
+  var clientNameYLoc = controlSheet.getRange("B12").getValue();//location in data with client name
+  var ssletterheadGID = controlSheet.getRange("B16").getValue(); //Letterhead Style Spreadsheet
+  var overRun = controlSheet.getRange("B17").getValue(); // Maximum number of runs before changing to Spreadsheet
+  var chartSheetName = controlSheet.getRange("B18").getValue(); //Name for charts sheet
+  var chartCounter = controlSheet.getRange("B19").getValue(); //Number of Charts Present
+  var fcRow = controlSheet.getRange("D18").getValue();; //starting row with charts data
+  var fcCol = controlSheet.getRange("D19").getValue();; //starting column with charts data
+    
+  if (numEntries> 0){
+    var data = getData(sGID, sSheet, dataSheetName, fRow, fCol);//CREATE DATA OBJECT FROM ENTRIES FOUND
+    var chartData = getData(sGID, sSheet, chartSheetName, fcRow, fcCol)  //creates data object for chart data table
+    var date = Utilities.formatDate(new Date(), "EST", "MM-dd-YYYY"); // Today's Date 
+    var currentOutput = getssData(dataSheetName, sGID);
+
+    if (numEntries < overRun){ //if less than 20 entries, use regular report 
+      var newDocId = copyLetterhead (sGID, sSheet, letterheadGID, archiveGID, docName); //Copies Letterhead 
+      docReportBuilder(sGID, sSheet, newDocId, numEntries, data, chartData, chartCounter); // Builds Document 
+      var clientName = clientNameChecker(sGID, sSheet, data, clientName, clientNameYLoc);
+      renameFile(newDocId, clientName, date); // renames File to final format  
+      var file = DriveApp.getFileById(newDocId); //new document in PDF format to attach to email  
+
+    }
+    else if(numEntries > overRun){ //if more than 20 entries send spreadsheet
+      var newDocId = copyLetterhead (sGID, sSheet, ssletterheadGID, archiveGID, docName); //Copies Letterhead 
+      spreadSheetReport(newDocId, currentOutput);      
+      var clientName = clientNameChecker(sGID, sSheet, data, clientName, clientNameYLoc);
+      var newName = renameFile(newDocId, clientName, date); // renames File to final format
+      var file = getSheetFileforEmail(newDocId, newName);
+    }    
+    myMail (file, clientName, date, sendTo, sendSubject, sendBody); // Sends Email
+  }  
+};
+
+function getSheetFileforEmail(newDocId, newName){  //File Fetcher
+  var requestData = {"method": "GET","headers":{"Authorization":"Bearer "+ ScriptApp.getOAuthToken()}};
+  var url = "https://docs.google.com/spreadsheets/d/"+ newDocId + "/export?format=xlsx&id="+newDocId;
+  var result = UrlFetchApp.fetch(url , requestData); 
+  var contents = result.getContent();
+  var file = {fileName:newName+".xlsx", content:contents, mimeType:"application/vnd.ms-excel"}; //"application//xlsx"    
+  
+  return file;
+};
+
+function clientNameChecker(sGID, sSheet, data, clientName, clientNameYLoc){
+  var controlSheet = SpreadsheetApp.openById(sGID).getSheetByName(sSheet);
+  if (clientName == ""){
+    var cName = data[0][clientNameYLoc];
+  }
+  else if (clientName != ""){
+    var cName = clientName;
+  }
+  return cName;
+}
+
+function spreadSheetReport(newDocId, currentOutput){
+  var currentSS = SpreadsheetApp.openById(newDocId).getSheets()[1];
+  currentSS.getRange("A1").offset(1, 0, currentOutput[1], currentOutput[2]).setValues(currentOutput[0]);  
+  
+}
+
+function renameFile(newDocId, clientName, date)
+{
+  var file  = DriveApp.getFileById(newDocId);
+  var currentName = file.getName();
+  var newName = clientName + currentName + date;
+  file.setName(newName);  
+  
+  return newName;
+}
+
+function getssData(dataTabReference, dataGIDReference)
+{
+  if (dataGIDReference != "")
+  {
+    var output= {};
+    var ss = SpreadsheetApp.openById(dataGIDReference).getSheetByName(dataTabReference);
+    output[1] = ss.getLastRow();//gets last row with data in sheet
+    output[2] = ss.getLastColumn();  //Gets last column with data in sheet      
+    var ssRange = ss.getRange(1, 1, output[1], output[2]);//Designates Range of data
+    output[0] = ssRange.getValues(); //Pulls values in the range as an Array
+  } 
+    return output;
+};
+
+
+function docReportBuilder(sGID, sSheet, newDocId, numEntries, object, chartData, chartCounter)
+{      
+  var source = SpreadsheetApp.openById(sGID);    
+  var templateSheet = source.getSheetByName(sSheet); //Location of Building Blocks
+    
+  for (var i = 0; i < numEntries; i++) //Adds pages for elements according to the total number of entries calculated. 
+  {     
+    var myData = object[i]; //Looks at specific data set from object array 
+    
+    var tGID = templateChecker(sGID, sSheet, myData);
+    Logger.log("builder output tGID " +i +":" +tGID);    
+    copyTemplate(sGID, sSheet, newDocId, tGID);
+    mergeData(myData, newDocId, sGID);
+    if(chartCounter >0){
+      var chartBlob = buildCharts(chartCounter, chartData)
+      mergeChart(newDocId,chartCounter, chartBlob)    
+    }
+  } 
+  
+};
+
+function templateChecker(sGID, sSheet, myData){
+  var controlSheet = SpreadsheetApp.openById(sGID).getSheetByName(sSheet); //Location of Building Blocks
+  var triggerFieldNum = controlSheet.getRange("F2").getValue();//54;
+  Logger.log("trigger Field Num: " + triggerFieldNum);
+  var triggerField = myData[triggerFieldNum];
+  Logger.log("triggerField:" +triggerField);
+  
+  var dt = controlSheet.getRange("D3:F16").getValues();
+  var testValue = {};
+  var gidValue = {};
+  
+  for(var j in dt){ 
+     testValue[j] = dt[j][0];
+     gidValue[j] = dt[j][2];
+  }
+  Logger.log("testValues : " + testValue);
+  Logger.log("GIDValues : " + gidValue);
+    
+  for (var i in testValue){
+    Logger.log("templateLoop # " +i);
+    if (testValue[i] !=""){
+      if (triggerField === testValue[i] ){
+        var tGID = gidValue[i];
+        Logger.log("testValue" +i+":" +testValue[i]);
+        Logger.log("gidValue" +i+":" +gidValue[i]);
+      }    
+    }
+  }
+    
+  Logger.log("current triggerField: " + triggerField);  
+  Logger.log("current tGID: " + tGID);  
+  
+  return tGID;    
+}
+
+
+function copyLetterhead (sourceGID, controlSheet, letterheadGID, archiveGID, docName){
+  var source = SpreadsheetApp.openById(sourceGID);  
+  var templateSheet = source.getSheetByName(controlSheet);
+    var destFolder = DriveApp.getFolderById(archiveGID); //Designate Folder destination
+  var copyDoc = DriveApp.getFileById(letterheadGID).makeCopy(docName, destFolder); //Copy template to folder   
+  var newDocID = copyDoc.getId(); // New Document ID 
+  
+  return newDocID;
+};
+
+function getData(sourceGID, controlSheet, dataSheetName, fRow, fCol){
+  
+  var source = SpreadsheetApp.openById(sourceGID)  
+  var templateSheet = source.getSheetByName(controlSheet);
+  var dataSheet = source.getSheetByName(dataSheetName); //Open sheet containing data to merge
+  var numRows = dataSheet.getLastRow();//gets last row with data in sheet
+  var numColumns = dataSheet.getLastColumn();  //Gets last column with data in sheet       
+  var dataRange = dataSheet.getRange(fRow, fCol, numRows, numColumns);//Designates Range of data
+  var object = dataRange.getValues(); //Pulls values in the range as an Array   
+  
+  return object;
+};
+
+function copyTemplate(sourceGID, controlSheet, newDocID, tGID){
+  var templateSheet = SpreadsheetApp.openById(sourceGID).getSheetByName(controlSheet); 
+  var newDoc = DocumentApp.openById(newDocID);
+  var newBody = newDoc.getBody(); //new Document Body
+  newBody.appendPageBreak();
+  
+  var templateBody = DocumentApp.openById(tGID).getBody();//Gets template body
+  var totalElements = templateBody.getNumChildren(); //Child Index for template file  
+  
+  /////////////COPIES TEMPLATE INTO NEW DOCUMENT WITH KEY TAG DESCRIPTIORS///////////////////////
+  for( var j = 0; j < totalElements; ++j ) //Checks against all elemnt types and appends accordingly.
+  {    
+    var element = templateBody.getChild(j).copy();
+    var type = element.getType();    
+    
+    if( type == DocumentApp.ElementType.PARAGRAPH ) //copies paragraph objects
+    {newBody.appendParagraph(element);}
+    
+    else if( type == DocumentApp.ElementType.TABLE)//copies table objects
+    {newBody.appendTable(element);} 
+    
+    else if( type == DocumentApp.ElementType.HORIZONTAL_RULE) //copies horizontal rule objects
+    {newBody.appendHorizontalRule();}
+     
+    else if( type == DocumentApp.ElementType.LIST_ITEM) //copies horizontal rule objects
+    {newBody.appendListItem(element);}
+    
+    else if( type == DocumentApp.ElementType.INLINE_IMAGE) //copies horizontal rule objects
+    {newBody.appendImage(element);}    
+  } 
+  newDoc.saveAndClose();
+}
+
+
+function mergeData(myData, newDocId, sourceGID){//, dLength, dtag){
+  var newDoc = DocumentApp.openById(newDocId);
+  var newBody = newDoc.getBody(); //new Document Body
+  var imgHeight = 250;
+  
+  var dLength = myData.length;      
+  var y = "{Field";
+  var dtag = tagger(y, dLength)
+   
+  var source = SpreadsheetApp.openById(sourceGID);
+  var style = {};
+    style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
+   
+  for (var q = 0; q<dLength; q++)
+  { 
+    var currentData  = myData[q];
+    var fileId = myData[q+1]; //Gets GID for image         
+    var tag = dtag[q];
+    
+    if (newBody.findText(tag) != null){
+      
+      if (currentData == "Image") //Image Check
+      {  
+        var blob = DriveApp.getFileById(fileId).getBlob(); //gets image blob      
+        var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
+        var clearTag = newBody.replaceText(tag, ""); //removes tag                  
+        var cImg = replacedParent.appendInlineImage(blob).setAttributes(style); //adds image at tag location using set "style"
+        cImg.setHeight(imgHeight);        
+      }      
+      else 
+      {
+       if (currentData != "")
+       {newBody.replaceText(tag, currentData);}
+        else
+        {newBody.replaceText(tag, "");}
+      }          
+    }
+  } 
+  
+  newDoc.saveAndClose();
+}
+
+function mergeChart(newDocId,chartsCounter, chartsBlob){//, dLength, dtag){
+  var newDoc = DocumentApp.openById(newDocId);
+  var newBody = newDoc.getBody(); //new Document Body
+  var imgHeight = 250;
+  var imgWidth = 600;
+  
+  var dLength = chartsCounter;      
+  var y = "{Chart";
+  var dtag = tagger(y, dLength)
+  
+  var style = {};
+    style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
+   
+  for (var q = 0; q<dLength; q++)
+  { 
+    var currentData  = chartsBlob[q];
+    var tag = dtag[q];
+    
+    if (newBody.findText(tag) != null){      
+      if (currentData != null) //Image Check
+      {  
+        var blob = currentData; //gets image blob      
+        var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
+        var clearTag = newBody.replaceText(tag, ""); //removes tag                  
+        var cImg = replacedParent.appendInlineImage(blob).setAttributes(style); //adds image at tag location using set "style"
+        cImg.setHeight(imgHeight).setWidth(imgWidth);        
+      }      
+      else 
+      {
+        newBody.replaceText(tag, "");
+      }          
+    }
+  }   
+  newDoc.saveAndClose();
+}
+
+function tagger(tagDesc, totalTags){
+
+  var dtag = {};
+  var y = tagDesc;
+  var z = "}";
+  
+  for (var tagNum = 0; tagNum < totalTags; tagNum++)
+  {
+    dtag[tagNum]  = y + tagNum + z;// compiles: "{Field" + # + "}" into {Field#}
+  } 
+  return dtag;  
+}
+
+function myMail (file, clientName, date, sendTo, sendSubject, sendBody){
+  if (sendTo != "Debug"){
+    var newSubject = clientName + sendSubject + date; //Email Subject       
+    MailApp.sendEmail(sendTo, newSubject, sendBody,{attachments:[file]}); //sends final email according to template and attaches newset document.         
+  }
+}
+
+function getChart(dataTable, colNum, chartName){
+  var xAxisTitle = "Date";
+  var yAxisTitle = chartName;
+  var chartTitle = yAxisTitle + " vs " + xAxisTitle;
+  var dataViewDefinition = Charts.newDataViewDefinition().setColumns([0, colNum, {
+    "calc":"stringify",
+    "type":"string",
+    "properties":{"role":"annotation"},
+    "sourceColumn":colNum
+  }]);
+ 
+ 
+  var chart = Charts.newLineChart()
+  .setDataTable(dataTable)
+  .setDataViewDefinition(dataViewDefinition)
+  .setOption('title', chartTitle)
+  .setOption('height', 336)
+  .setOption('width', 841)
+  .setOption('curveType', 'function')
+  .setOption('legend', 'top')
+  .setOption('interpolateNulls', 'true')
+  .setOption('legacyScatterChartLabels', 'true')
+  .setOption('lineWidth', 1)
+  .setOption('treatLabelAsText', 'true')
+  .setOption('vAxis',
+               {
+                 useFormatFromData:'true',
+                 minValue:'null', 
+                 logScale:'false',
+                 maxValue:'null', 
+                 formatOptions:{scaleFactor:'null',source:'data'}, 
+                 format: "##.##",
+                 title:yAxisTitle, 
+                 viewWindow:{min:'null',max:'null'}, 
+                 titleTextStyle:{color:"#222",fontSize:12,italic:false}                 
+               }) 
+  .setOption('legacyContinuousAxisRemoved','true')
+  .setOption('hAxis',{useFormatFromData:'true',title:xAxisTitle, slantedText: 'true', format: "MM/dd/yyyy"})
+  .setOption('domainAxis', {direction: 1})
+  .setOption('booleanRole', 'certainty')
+  .setOption('hasHiddenData', 'false')
+  .setOption('series', 
+             {"0":{
+               "pointSize":14,
+               "errorBars":{"errorType":"none"},
+               "dataLabel":"value",
+               "annotations":{"stemColor":"none"},
+               "pointShape":{"rotation":45,"sides":4,"dent":0.15,"type":"star"},
+               "lineWidth":1
+              }
+             }
+            )
+  .setOption('trendlines',
+             {"0":
+              {
+                "pointSize":0,
+                "color":"#85200c",
+                "showR2":'false',
+                "labelInLegend":"Trendline",
+                "degree":2,
+                "visibleInLegend":'true',
+                "type":"linear",
+                "opacity":0.4,
+                "lineWidth":2
+              }
+             })
+  .setOption('isDefaultVisualization','true')
+  .setOption('legacyContinuousAxisRemoved', 'true')
+  .setOption('tooltip',{})
+  .setOption('state', {})
+    
+  .build();
+return chart;    
+}
+
+function getDataTable(chartData, counter){
+  var dataTable = Charts.newDataTable();
+  
+  for (var col=0; col<counter+1; col++) {
+    var label = chartData[0][col];
+    var firstCell = chartData[1][col];
+        
+    if (col == 0)
+      dataTable.addColumn(Charts.ColumnType.DATE, label);
+    else if (typeof firstCell == 'number')
+      dataTable.addColumn(Charts.ColumnType.NUMBER, label);
+    else
+      dataTable.addColumn(Charts.ColumnType.STRING, label);      
+  }
+  
+  for (var row = 1; row < chartData.length; row++) {
+    if (chartData[row][0] != ""){
+      dataTable.addRow(chartData[row]);
+    }
+  }  
+  var dt = dataTable.build()
+  return dt; 
+}
+
+
+function buildCharts(counter, chartData){  
+  //var t = 0;  
+  var imageChart = {};
+  var j = 0;
+  var dataTable = getDataTable(chartData, counter); 
+  
+  for (var i = 1; i < counter; i++){//creates image for each chart
+    var chartName = chartData[0][i];
+    var chart = getChart(dataTable, i, chartName);    
+    imageChart[j] = chart.getAs(MimeType.PNG); 
+    j++
+    //var t = t + 3 + i;
+    
+    //insert into the spreadsheet
+    //chartSheet.insertImage(imageChart, t, t);
+  }
+  return imageChart;
 }
