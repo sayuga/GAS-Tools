@@ -1,0 +1,51 @@
+//merges chart blob into a given key tag reference in a docs file. Can be used for image blobs by providing a 
+//image blob array and a counter with the total number of images
+
+function mergeChart(newDocId,chartsCounter, chartsBlob){//, dLength, dtag){
+  var newDoc = DocumentApp.openById(newDocId);
+  var newBody = newDoc.getBody(); //new Document Body
+  var imgHeight = 250;
+  var imgWidth = 600;
+  
+  var dLength = chartsCounter;      
+  var y = "{Chart";//tag reference
+  var dtag = tagger(y, dLength)
+  
+  var style = {};
+    style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
+   
+  for (var q = 0; q<dLength; q++)
+  { 
+    var currentData  = chartsBlob[q];
+    var tag = dtag[q];
+    
+    if (newBody.findText(tag) != null){      
+      if (currentData != null) //Image Check
+      {  
+        var blob = currentData; //gets image blob      
+        var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
+        var clearTag = newBody.replaceText(tag, ""); //removes tag                  
+        var cImg = replacedParent.appendInlineImage(blob).setAttributes(style); //adds image at tag location using set "style"
+        cImg.setHeight(imgHeight).setWidth(imgWidth);        
+      }      
+      else 
+      {
+        newBody.replaceText(tag, "");
+      }          
+    }
+  }   
+  newDoc.saveAndClose();
+}
+
+function tagger(tagDesc, totalTags){ //builds the tag reference list
+
+  var dtag = {};
+  var y = tagDesc;
+  var z = "}";
+  
+  for (var tagNum = 0; tagNum < totalTags; tagNum++)
+  {
+    dtag[tagNum]  = y + tagNum + z;// compiles: "{Field" + # + "}" into {Field#}
+  } 
+  return dtag;  
+}
