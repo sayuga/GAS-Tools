@@ -1,0 +1,58 @@
+//merges cell data in a row to the key tag's ona docs file. In the event that there is an image, a "Image" 
+//label is placed in the cell preceeding the image GoogleID (GID) for the image. It then takes the GID and adds the image
+//at the tag reference location
+
+function mergeData(myData, newDocId, sourceGID){//, dLength, dtag){
+  var newDoc = DocumentApp.openById(newDocId);
+  var newBody = newDoc.getBody(); //new Document Body
+  var imgHeight = 250;
+  
+  var dLength = myData.length;      
+  var y = "{Field"; //tag key identity reference
+  var dtag = tagger(y, dLength)
+   
+  var source = SpreadsheetApp.openById(sourceGID);
+  var style = {};
+    style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
+   
+  for (var q = 0; q<dLength; q++)
+  { 
+    var currentData  = myData[q];
+    var fileId = myData[q+1]; //Gets GID for image         
+    var tag = dtag[q];
+    
+    if (newBody.findText(tag) != null){
+      
+      if (currentData == "Image") //Image Check
+      {  
+        var blob = DriveApp.getFileById(fileId).getBlob(); //gets image blob      
+        var replacedParent = newBody.findText(tag).getElement().getParent().asParagraph(); //gets tag location
+        var clearTag = newBody.replaceText(tag, ""); //removes tag                  
+        var cImg = replacedParent.appendInlineImage(blob).setAttributes(style); //adds image at tag location using set "style"
+        cImg.setHeight(imgHeight);        
+      }      
+      else 
+      {
+       if (currentData != "")
+       {newBody.replaceText(tag, currentData);}
+        else
+        {newBody.replaceText(tag, "");}
+      }          
+    }
+  } 
+  
+  newDoc.saveAndClose();
+}
+
+function tagger(tagDesc, totalTags){
+
+  var dtag = {};
+  var y = tagDesc;
+  var z = "}";
+  
+  for (var tagNum = 0; tagNum < totalTags; tagNum++)
+  {
+    dtag[tagNum]  = y + tagNum + z;// compiles: "{Field" + # + "}" into {Field#}
+  } 
+  return dtag;  
+}
