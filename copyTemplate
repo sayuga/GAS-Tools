@@ -1,0 +1,33 @@
+//Copies a document (tGID) to the bottom of a existing document (newDocID) using all elements present in the to-be-copied document
+
+function copyTemplate(newDocID, tGID){  
+  var newDoc = DocumentApp.openById(newDocID);
+  var newBody = newDoc.getBody(); //new Document Body
+  newBody.appendPageBreak();
+  
+  var templateBody = DocumentApp.openById(tGID).getBody();//Gets template body
+  var totalElements = templateBody.getNumChildren(); //Child Index for template file  
+  
+  /////////////COPIES TEMPLATE INTO NEW DOCUMENT WITH KEY TAG DESCRIPTIORS///////////////////////
+  for( var j = 0; j < totalElements; ++j ) //Checks against all elemnt types and appends accordingly.
+  {    
+    var element = templateBody.getChild(j).copy();
+    var type = element.getType();    
+    
+    if( type == DocumentApp.ElementType.PARAGRAPH ) //copies paragraph objects
+    {newBody.appendParagraph(element);}
+    
+    else if( type == DocumentApp.ElementType.TABLE)//copies table objects
+    {newBody.appendTable(element);} 
+    
+    else if( type == DocumentApp.ElementType.HORIZONTAL_RULE) //copies horizontal rule objects
+    {newBody.appendHorizontalRule();}
+     
+    else if( type == DocumentApp.ElementType.LIST_ITEM) //copies horizontal rule objects
+    {newBody.appendListItem(element);}
+    
+    else if( type == DocumentApp.ElementType.INLINE_IMAGE) //copies horizontal rule objects
+    {newBody.appendImage(element);}    
+  } 
+  newDoc.saveAndClose();
+}
