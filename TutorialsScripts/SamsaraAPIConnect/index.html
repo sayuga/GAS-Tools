@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Samsara API Connect</title>
+    <base target="_top">    
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>    
+    <script src="https://apis.google.com/js/api.js?onload=onApiLoad"></script>
+
+  </head>
+    
+<body>
+  
+<style>
+body{
+   background: white;
+   padding-left: 5px;
+   padding-right: 5px;   
+}
+.branding-below {
+  bottom: 46px;
+  top: 105px;
+}
+input[type=text] {
+  width: 250px;
+}
+
+select{
+   width:250px;
+}
+
+</style>
+
+<!--HEADER-->
+   <div class="sidebar top">      
+      <div>
+        <img alt="Samsara_logo" height="50px" width ="100px" src="https://drive.google.com/uc?export=download&id=0B0SkrOYjgNUXQlAyaWE3MGNzems">
+        <img alt="Sayuga_logo" height="50px" width ="100px" src="https://drive.google.com/uc?export=download&id=0B0SkrOYjgNUXUDI5OVBHcDZoZ0E">
+      </div>
+      <div ><h4>Samsara API Connect</h4></div>       
+   </div>
+
+<!--BODY-->
+<div class="sidebar branding-below">
+   <form id="myForm" class="form-horizontal">               	
+   
+      <div class="block form-group">
+         <label for="field_0">API Method</label>
+         <select id="field_0" name ="field_0" >
+            <option >get</option>
+            <option selected>post</option>                
+         </select>
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_1">API Base URL</label>
+         <input type="text" id="field_1" name ="field_1" value="<?=data[1]?>" >
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_2">API Key</label>
+         <input type="text" id="field_2" name ="field_2" value="<?=data[2]?>" >
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_3">Query Choice</label>
+         <select id="field_3" name ="field_3">
+            <option selected><?=query[0]?></option>
+            <option><?=query[1]?></option>
+            <option><?=query[2]?></option>
+            <option><?=query[3]?></option>
+            <option><?=query[4]?></option>
+            <option><?=query[5]?></option>
+            <option><?=query[6]?></option>
+            <option><?=query[7]?></option>
+            <option><?=query[8]?></option>
+            <option><?=query[9]?></option>
+            <option><?=query[10]?></option>
+         </select>
+      </div>                        
+      
+      <div class="block form-group">
+         <label for="field_4">Target Sheet Name</label>
+         <input type="text" id="field_4" name ="field_4" value="<?=data[4]?>" >
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_5">Group ID</label>
+         <input type="text" id="field_5" name ="field_5" value="<?=data[5]?>" >
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_6">Start Date &amp; Time (mm/dd/yyy hh:mm:ss)</label>
+         <input type="text" id="field_6" name ="field_6" value="<?=data[6]?>" >
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_7">End Date &amp; Time (mm/dd/yyy hh:mm:ss)</label>
+         <input type="text" id="field_7" name ="field_7" value="<?=data[7]?>" >
+      </div>           
+      
+      <div class="block form-group">
+         <label for="field_8">Data Interval in Minutes</label>
+         <input type="text" id="field_8" name ="field_8" value="<?=data[8]?>" >
+      </div>                       
+      
+      <div class="block form-group">
+         <label for="field_9">Fill Missing</label>
+         <select id="field_9" name ="field_9">
+            <option selected>withNull</option>
+            <option>withPrevious</option>                
+         </select>
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_10">Vehicle ID</label>
+         <input type="text" id="field_10" name ="field_10" value="<?=data[10]?>" >
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_11">Organization ID</label>
+         <input type="text" id="field_11" name ="field_11" value="<?=data[11]?>" >
+      </div>            
+      
+      <div class="block form-group">
+         <label for="field_12">Driver ID</label>
+         <input type="text" id="field_12" name ="field_12" value="<?=data[12]?>" >
+      </div>
+           
+      <div class="block form-group">
+         <label for="field_13">Job Created - Max Date &amp; Time (mm/dd/yyy hh:mm:ss)</label>
+         <input type="text" id="field_13" name ="field_13" value="<?=data[13]?>" >
+      </div>            
+      
+      <div class="block form-group">
+         <label for="field_14">Duration in Seconds</label>
+         <input type="text" id="field_14" name ="field_14" value="<?=data[14]?>" >
+      </div>
+      
+      <div class="block form-group">
+         <label for="field_15">Sensors Series List - Sheet Name</label>
+         <input type="text" id="field_15" name ="field_15" value="<?=data[15]?>" >
+      </div>            
+      
+      <div class="block form-group">
+         <label for="field_16">Sensors List - Sheet Name</label>
+         <input type="text" id="field_16" name ="field_16" value="<?=data[16]?>" >
+      </div>            
+      
+      <br>
+      
+      <div class="block">
+         <button type="button" class="blue" onclick="google.script.run.withSuccessHandler(google.script.host.close).postController(this.parentNode.parentNode)">Submit</button>                  
+         <button onclick="google.script.host.close()">Cancel</button>
+      </div>                        
+   </form>          
+</div>
+
+<!--FOOTER -->
+<div class="sidebar bottom">
+  <span class="gray">
+    Developed by <a href="https://sites.google.com/view/jvargas-eresume/home">Jonathan Vargas</a></span>
+</div>
+
+</body>
+</html>
